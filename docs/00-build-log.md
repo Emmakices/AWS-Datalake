@@ -54,3 +54,19 @@ exist yet; after creating an empty repo under `Emmakices` and retrying,
 https://github.com/Emmakices/AWS-Datalake. Key lesson: `403` = authorized-but-
 denied, `404` = not-found/wrong-owner-or-uncreated. See
 `docs/04-commit-and-push-to-github.md`.
+
+**Step 05 — First real AWS resources: S3 data-lake buckets (2026-06-21).**
+Committed the pending Step 04 docs (`9a8fdb5`), then built the data lake's
+storage tier. Explained the bronze/silver/gold (medallion) pattern, then wrote
+`s3.tf` creating three S3 buckets with a single `for_each` over
+`toset(["bronze","silver","gold"])` — names made globally unique via
+`${project_name}-${zone}-${account_id}` using a `data.aws_caller_identity` lookup.
+Each bucket also got versioning (recovery of overwrites/deletes), SSE-S3 AES-256
+encryption at rest (compliance baseline), and a full public-access block (breach
+guardrail). `terraform plan` showed `12 to add` (4 resource types x 3 zones);
+`terraform apply -auto-approve` created them all — our FIRST billable resources —
+and recorded their IDs in `terraform.tfstate`. Verified independently with
+`aws s3 ls` and `aws s3api` (versioning Enabled, all public-access protections
+true). Cost: empty buckets are ~$0, safe to leave running. Noted the
+`terraform destroy` end-of-session habit for when we add paid services. See
+`docs/05-s3-data-lake-buckets.md`.

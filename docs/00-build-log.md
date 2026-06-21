@@ -27,3 +27,18 @@ rules block `*.tfstate` (state files that can contain secrets), `.terraform/`
 works by creating a throwaway `terraform.tfstate` and watching `git check-ignore`
 block it via rule `*.tfstate`. No first commit made yet. See
 `docs/02-git-init-and-gitignore.md`.
+
+**Step 03 — Baseline commit + first real Terraform (2026-06-21).** Confirmed the
+global git identity was already set (`Emmakices` / `ihetuemmanuel@gmail.com`),
+explained `--global` vs `--local`, then made the baseline commit `15a01c4`
+("Initial project setup: docs and gitignore", 4 files). Wrote the minimal
+Terraform foundation: `versions.tf` (pins Terraform `>= 1.5.0` and AWS provider
+`~> 5.0`), `provider.tf` (AWS provider using `var.aws_region` with `default_tags`),
+and `variables.tf` (`aws_region` defaulting to `us-east-2`, `project_name`
+defaulting to `verafin-data-lake`). `terraform init` first failed with a
+`zip: checksum error` (corrupted download); deleting `.terraform/` and re-running
+fixed it, installing `hashicorp/aws v5.100.0` and creating the lock file. Verified
+`.terraform.lock.hcl` is tracked while `.terraform/` is ignored. `terraform plan`
+reported "No changes" because no resources are declared yet — a working,
+authenticated, initialized project with zero AWS resources created. See
+`docs/03-terraform-foundation.md`.

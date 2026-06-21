@@ -42,3 +42,15 @@ fixed it, installing `hashicorp/aws v5.100.0` and creating the lock file. Verifi
 reported "No changes" because no resources are declared yet — a working,
 authenticated, initialized project with zero AWS resources created. See
 `docs/03-terraform-foundation.md`.
+
+**Step 04 — Commit foundation and push to GitHub (2026-06-21).** Committed the
+Terraform foundation and Step 03 docs as `8a8f70a` (6 files), deliberately with
+no Claude co-author trailer. Adding the remote and pushing took three tries:
+first a `403` because the remote pointed at `Terraboganalytics/AWS-Datalake`
+(the authenticated user `Emmakices` had no write access there); repointing the
+remote to `Emmakices/AWS-Datalake` then gave a `404` because that repo didn't
+exist yet; after creating an empty repo under `Emmakices` and retrying,
+`git push -u origin main` succeeded and `main` now tracks `origin/main` at
+https://github.com/Emmakices/AWS-Datalake. Key lesson: `403` = authorized-but-
+denied, `404` = not-found/wrong-owner-or-uncreated. See
+`docs/04-commit-and-push-to-github.md`.

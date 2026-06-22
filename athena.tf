@@ -46,9 +46,13 @@ resource "aws_athena_workgroup" "main" {
   name = "${var.project_name}-wg"
 
   configuration {
-    # Make these settings MANDATORY for every query in this workgroup (users
-    # cannot override the results location or remove the scan cap).
-    enforce_workgroup_configuration    = true
+    # Workgroup settings act as DEFAULTS but do NOT force-override per-query
+    # output. We set this to false so CTAS/ETL queries can specify their own
+    # `external_location` (e.g. write curated gold data to the gold bucket).
+    # Trade-off: with true, every query's results are forced to the location
+    # below (good for analyst results governance) but CTAS external_location is
+    # rejected. The scan cost-cap below still applies either way.
+    enforce_workgroup_configuration    = false
     publish_cloudwatch_metrics_enabled = true
 
     # COST GUARDRAIL: cancel any single query that would scan more than 10 MB.

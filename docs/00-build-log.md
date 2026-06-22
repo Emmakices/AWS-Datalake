@@ -137,3 +137,20 @@ fail with `ConditionalCheckFailedException` (the conditional write rejected), th
 it and seeing plan work again. Cost: negligible (cents/month); DynamoDB is PAY_PER_REQUEST.
 Destroy guidance: do NOT casually destroy the backend — migrate state back local first.
 See `docs/09-remote-state-backend.md`.
+
+**Step 10 — Gold zone with Athena CTAS (2026-06-22).** Committed and pushed the backend
+work (`19725e9`), then built the gold (curated, business-ready) zone. Explained gold vs
+silver (aggregated dashboard table vs granular clean rows) and CTAS vs Glue (SQL-shaped
+aggregation -> CTAS; code-shaped/huge -> Spark), choosing CTAS for a simple GROUP BY.
+First CTAS FAILED because the workgroup's `enforce_workgroup_configuration = true` forbids
+a per-query `external_location`; fixed by setting it to false in athena.tf (0 add/1 change),
+keeping the scan cap while allowing CTAS to write to the gold bucket. The CTAS
+(`gold_spend_by_category`: total/avg/count per category) scanned 265 bytes, wrote a
+908-byte Parquet file to `s3://...-gold-.../spend_by_category/`, and registered the catalog
+table in one statement; the verifying query scanned 346 bytes and matched known totals
+(electronics 1299, groceries 370/2, etc.). Key wrinkle documented: CTAS tables live OUTSIDE
+Terraform/IaC (state doesn't know them), reconciled by accepting them as query-time
+artifacts (version the SQL + orchestrate), defining/importing an `aws_glue_catalog_table`,
+or using a Terraform-managed Glue job+crawler. Cost negligible, no standing cost; full
+teardown must DROP the CTAS table and empty the now-non-empty gold bucket. See
+`docs/10-gold-zone-ctas.md`.

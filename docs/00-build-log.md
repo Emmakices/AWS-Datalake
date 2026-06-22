@@ -70,3 +70,37 @@ and recorded their IDs in `terraform.tfstate`. Verified independently with
 true). Cost: empty buckets are ~$0, safe to leave running. Noted the
 `terraform destroy` end-of-session habit for when we add paid services. See
 `docs/05-s3-data-lake-buckets.md`.
+
+**Step 06 — Outputs + Glue catalog/crawler (2026-06-21).** Committed and pushed
+the S3 work (`b0a6dbc`), then added `outputs.tf` surfacing the bucket names and
+ARNs as zone-keyed maps (outputs = a config's return values, vs variables =
+inputs). Made the lake queryable: uploaded a 10-row fake `transactions.csv` to
+`s3://…-bronze-…/transactions/`, then wrote `glue.tf` with a Glue Catalog
+database (`verafin_data_lake_catalog`), a least-privilege IAM role for the crawler
+(trust policy for `glue.amazonaws.com` + `AWSGlueServiceRole` managed policy +
+a scoped inline S3-read policy on just the bronze transactions prefix — NOT
+admin), and a crawler pointed at that prefix. `terraform apply` added 5 resources;
+since Terraform can't *run* a crawler, triggered it with `aws glue start-crawler`
+and polled to SUCCEEDED. The crawler created table `transactions` with an inferred
+schema (amount → double; transaction_ts stayed string), format csv, 10 rows.
+Cost: catalog storage free at this scale, a crawler run is a few cents, idle
+resources are $0 — nothing has standing cost. Documented the destroy gotcha:
+`terraform destroy` would fail on the non-empty bronze bucket (force_destroy=false)
+until it's emptied. See `docs/06-glue-catalog-and-crawler.md`.
+
+**Step 07 — Querying with Amazon Athena (2026-06-22).** Set up Athena to run SQL
+on the catalog table. Explained Athena as serverless + query-in-place (no loading;
+data stays in S3) and how it reads schema from the Glue catalog we built. Wrote
+`athena.tf`: a dedicated query-results S3 bucket (same security baseline as the
+zone buckets) plus an Athena workgroup (`verafin-data-lake-wg`) that enforces the
+results location and a 10 MB `bytes_scanned_cutoff_per_query` cost guardrail —
+explained why a dedicated workgroup beats the default. `terraform apply` added 5
+resources. Ran two queries via the CLI (`aws athena start-query-execution` ->
+poll -> get-query-results): `SELECT * LIMIT 10` and a per-category SUM aggregation
+— both succeeded. Key lesson: BOTH scanned the full 691 bytes even though the
+aggregation needed only 2 of 7 columns, because bronze is row-based CSV. Athena
+bills per byte scanned (~$5/TB, 10 MB min), so converting bronze CSV to columnar,
+partitioned silver Parquet would cut scan cost dramatically — the classic
+interview point. Cost here ≈ $0.00005/query; nothing has standing cost, so it's
+safe to leave running (destroy would need the non-empty buckets emptied first).
+See `docs/07-athena-querying.md`.

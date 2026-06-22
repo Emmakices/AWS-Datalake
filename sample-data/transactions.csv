@@ -1,0 +1,11 @@
+transaction_id,account_id,transaction_ts,amount,currency,merchant,category
+T1001,A001,2026-06-01T09:14:00,42.50,USD,Blue Bottle Coffee,dining
+T1002,A002,2026-06-01T11:32:00,1299.00,USD,Apple Store,electronics
+T1003,A001,2026-06-02T14:05:00,18.75,USD,Lyft,transport
+T1004,A003,2026-06-02T16:48:00,250.00,USD,Whole Foods,groceries
+T1005,A002,2026-06-03T08:20:00,9.99,USD,Spotify,subscriptions
+T1006,A004,2026-06-03T19:10:00,76.40,USD,Shell,fuel
+T1007,A001,2026-06-04T12:00:00,33.10,USD,Chipotle,dining
+T1008,A003,2026-06-04T20:25:00,540.00,USD,Delta Airlines,travel
+T1009,A004,2026-06-05T10:45:00,120.00,USD,Costco,groceries
+T1010,A002,2026-06-05T15:30:00,15.00,USD,AMC Theaters,entertainment

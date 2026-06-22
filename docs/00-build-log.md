@@ -104,3 +104,20 @@ partitioned silver Parquet would cut scan cost dramatically — the classic
 interview point. Cost here ≈ $0.00005/query; nothing has standing cost, so it's
 safe to leave running (destroy would need the non-empty buckets emptied first).
 See `docs/07-athena-querying.md`.
+
+**Step 08 — Bronze CSV -> Silver Parquet via Glue ETL (2026-06-22).** Committed and
+pushed all prior work (`405e4b5`), then built the canonical bronze->silver
+transform. Wrote a PySpark script (`glue_jobs/bronze_to_silver_transactions.py`)
+that reads bronze CSV, casts `amount` to double, drops empty rows, and writes
+Snappy Parquet to silver. `glue_etl.tf` uploads the script via `aws_s3_object`,
+defines a least-privilege ETL IAM role (read bronze + read/write silver, NOT
+admin) shared by the job and a silver crawler, an `aws_glue_job` (Glue 4.0, 2x
+G.1X), and a silver crawler with `table_prefix = "silver_"`. `terraform apply`
+added 6 resources. Ran the job (SUCCEEDED in ~90s, wrote one 2589-byte Parquet
+file) then the silver crawler (created table `silver_transactions`, parquet, 10
+rows). The payoff: the SAME aggregation scanned 691 bytes on bronze CSV but only
+265 bytes on silver Parquet (~62% less) — even though the Parquet FILE (2589B) is
+bigger than the CSV (691B) due to small-scale metadata overhead. Lesson: Parquet
+wins on bytes-SCANNED (what Athena bills) via columnar pruning, and the gap
+explodes at scale. Cost: job run ~a few cents, crawler run ~10-15 cents, no
+standing cost. See `docs/08-bronze-to-silver-parquet.md`.

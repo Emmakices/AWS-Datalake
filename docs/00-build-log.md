@@ -172,3 +172,17 @@ role and queried — allowed columns worked, `SELECT *` returned everything BUT 
 and `SELECT account_id` FAILED ("cannot be resolved or not authorized"); reverting to admin,
 `SELECT account_id` SUCCEEDED. Lake Formation is free; no standing cost. See
 `docs/11-lake-formation-governance.md`.
+
+**Step 12 — Row-level security with a Lake Formation data filter (2026-06-22).**
+Added ROW-level security on `transactions`: a "data cells filter" with predicate
+`account_id IN ('A001','A002')`, granted (SELECT on the FILTER) to a new
+accounts-analyst role. Hit a real provider bug — `aws_lakeformation_data_cells_filter`
+in AWS provider 5.x throws "Provider produced inconsistent result after apply" on
+create/modify, tainting the filter and blocking the dependent grant (and the bundled
+CLI 2.0.30 is too old to manage filters out-of-band). Worked around it: untainted the
+filter, added `lifecycle { ignore_changes = [table_data] }`, decoupled the grant
+(reference filter by name, drop depends_on), and applied just the grant. PROOF: as the
+accounts-analyst, `SELECT DISTINCT account_id` returned only A001/A002 and `count(*)`
+was 6; as admin, all four accounts and 10 rows. Row-level security enforced by LF.
+Documented the known `aws_lakeformation_permissions` drift caveat. LF is free; no
+standing cost. See `docs/12-lake-formation-row-level-security.md`.

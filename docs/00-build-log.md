@@ -121,3 +121,19 @@ bigger than the CSV (691B) due to small-scale metadata overhead. Lesson: Parquet
 wins on bytes-SCANNED (what Athena bills) via columnar pruning, and the gap
 explodes at scale. Cost: job run ~a few cents, crawler run ~10-15 cents, no
 standing cost. See `docs/08-bronze-to-silver-parquet.md`.
+
+**Step 09 — Remote state backend: S3 + DynamoDB locking (2026-06-22).** Committed and
+pushed the ETL work (`1feb6f9`), then moved Terraform state off the laptop. Explained
+why local state is risky (durability, sharing, no locking) and the two backend pieces:
+an S3 bucket (durable, versioned, encrypted storage) and a DynamoDB table (locking via
+a conditional PutItem keyed by `LockID`). Covered the chicken-and-egg problem and the
+bootstrap approach taken. Wrote `state-backend.tf` (state bucket + lock table), applied
+it with local state (5 added), then added a hardcoded `backend "s3"` block to versions.tf
+(backends can't use variables) and ran `terraform init -migrate-state -force-copy` to copy
+local state up to S3 — explained the migration prompt (copy existing state = yes). Verified:
+state object (~62 KB) now in S3, local tfstate emptied (backup kept), `terraform state list`
+reads 38 items remotely. Proved locking by manually writing a lock item, watching `plan`
+fail with `ConditionalCheckFailedException` (the conditional write rejected), then deleting
+it and seeing plan work again. Cost: negligible (cents/month); DynamoDB is PAY_PER_REQUEST.
+Destroy guidance: do NOT casually destroy the backend — migrate state back local first.
+See `docs/09-remote-state-backend.md`.

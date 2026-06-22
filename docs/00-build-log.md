@@ -154,3 +154,21 @@ artifacts (version the SQL + orchestrate), defining/importing an `aws_glue_catal
 or using a Terraform-managed Glue job+crawler. Cost negligible, no standing cost; full
 teardown must DROP the CTAS table and empty the now-non-empty gold bucket. See
 `docs/10-gold-zone-ctas.md`.
+
+**Step 11 — Fine-grained governance with Lake Formation (centerpiece) (2026-06-22).**
+Committed and pushed the gold/CTAS work (`e8d71fb`), then enforced column-level security.
+Explained the core interview concept: IAM (coarse) vs Lake Formation (fine), the AND rule
+(an LF-registered resource needs BOTH IAM API permission and an LF data grant),
+`IAMAllowedPrincipals` (the default grant that makes LF defer to IAM — must be revoked or
+column rules do nothing), and what registering an S3 location does (LF brokers data access
+via the service-linked role and vends column-scoped credentials through GetDataAccess).
+Wrote `lakeformation.tf`: data lake settings (admin + no default IAMAllowedPrincipals),
+registered the bronze location, a data-analyst IAM role with Athena/Glue/LF API access but
+NO direct S3 to bronze, and LF grants (analyst = SELECT all columns EXCEPT account_id via
+`wildcard=true` + `excluded_column_names`; admin = SELECT all). First plan failed because
+excluded columns require `wildcard=true`; fixed and applied (7 added). Revoked the table's
+`IAMAllowedPrincipals = ALL` via CLI to switch on enforcement. PROOF: assumed the analyst
+role and queried — allowed columns worked, `SELECT *` returned everything BUT account_id,
+and `SELECT account_id` FAILED ("cannot be resolved or not authorized"); reverting to admin,
+`SELECT account_id` SUCCEEDED. Lake Formation is free; no standing cost. See
+`docs/11-lake-formation-governance.md`.
